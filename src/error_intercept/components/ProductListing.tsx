@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Select, Space, Button, Tag, Input, List, Checkbox } from "antd";
+import cn from "clsx";
 import {
   EllipsisOutlined,
   MenuOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import "./ProductListing.css";
+// import "./ProductListing.css";
+
+import s from "./ProductListing.module.css";
 import { Product, mockProducts } from "./mockedProducts";
 
 const statusStyles = {
@@ -107,7 +110,7 @@ const useProductData = (initialPageSize: number) => {
 
   // Update handlePageSizeChange in useProductData hook
   const handlePageSizeChange = useCallback(
-    (current: number, pageSize: number) => {
+    (_current: number, pageSize: number) => {
       if (state.loading) return;
       setState((prev) => ({
         ...prev,
@@ -219,7 +222,7 @@ const ProductListing: React.FC = () => {
     return (
       <Space size={2}>
         {badges.map((badge, index) => (
-          <div key={index} className={`badge badge-${badge.toLowerCase()}`}>
+          <div key={index} className={cn(s.badge, s[`badge${badge}`])}>
             {badge}
           </div>
         ))}
@@ -232,34 +235,36 @@ const ProductListing: React.FC = () => {
     if (!style) return null;
 
     return (
-      <div className="status-indicator" style={{ color: style.color }}>
+      <div className={s.statusIndicator} style={{ color: style.color }}>
         {style.text}
       </div>
     );
   };
 
   return (
-    <div className="product-listing">
-      <div className="product-header">
+    <div className={s.productListing}>
+      <div className={s.productHeader}>
         <h1>Instrument Products ({pagination.total})</h1>
-        <div className="header-actions">
+        <div className={s.headerActions}>
           <Input
             placeholder="Search"
             onChange={handleInputChange}
-            className="search-input"
+            className={s.searchInput}
             suffix={<SearchOutlined />}
             value={searchValue}
           />
-          <Button type="primary">Add New</Button>
-          <div className="icon-group">
-            <MenuOutlined className="header-icon" />
-            <EllipsisOutlined className="header-icon" />
+          <Button type="primary" className={s.addNewBtn}>
+            Add New
+          </Button>
+          <div className={s.iconGroup}>
+            <MenuOutlined className={s.headerIcon} />
+            <EllipsisOutlined className={s.headerIcon} />
           </div>
         </div>
       </div>
 
-      <div className="filter-section">
-        <div className="filter-controls">
+      <div className={s.filterSection}>
+        <div className={s.filterControls}>
           <Select
             placeholder="Status: All"
             onChange={handleSelectChange}
@@ -275,48 +280,50 @@ const ProductListing: React.FC = () => {
         </Button>
       </div>
 
-      {error && <div className="error-message">{error.message}</div>}
+      {error && <div className={s.errorMessage}>{error.message}</div>}
 
       <List
         loading={loading}
         dataSource={data}
-        className="product-list"
+        className={s.productList}
         renderItem={(item) => (
           <List.Item
-            className={`product-item ${
-              selectedItems.includes(item.id) ? "selected" : ""
-            }`}
+            className={cn(s.productItem, {
+              [s.selected]: selectedItems.includes(item.id),
+            })}
           >
             <Checkbox
               checked={selectedItems.includes(item.id)}
               onChange={() => handleCheckboxChange(item.id)}
             />
-            <div className="card-image">
+            <div className={s.cardImage}>
               <div
-                className={`card-placeholder ${
-                  item.network?.toLowerCase() || ""
-                }`}
+                className={cn(s.cardPlaceholder, {
+                  [s.mastercard]: item.network?.toLowerCase() === "mastercard",
+                  [s.visa]: item.network?.toLowerCase() === "visa",
+                })}
               />
             </div>
-            <div className="product-info">
+            <div className={s.productInfo}>
               <Space size={4}>
-                <span className="product-name">{item.name}</span>
-                <span className="product-version">v{item.version}</span>
+                <span className={s.productName}>{item.name}</span>
+                <span className={s.productVersion}>v{item.version}</span>
                 {renderBadges(item.badges)}
               </Space>
-              <div className="product-network">{item.network}</div>
-              <Space size={4} className="product-tags">
+              <div className={s.productNetwork}>{item.network}</div>
+              <Space size={4} className={s.productTags}>
                 <Tag>{item.type}</Tag>
                 <Tag>{item.subtype}</Tag>
               </Space>
             </div>
-            <div className="product-status">{renderStatus(item.status)}</div>
+            <div className={s.productStatus}>{renderStatus(item.status)}</div>
             <Button type="link">view</Button>
           </List.Item>
         )}
         pagination={{
           ...pagination,
-          className: "ant-pagination-custom",
+          className: s.antPaginationCustom,
+          align: "center",
           defaultPageSize: pagination.pageSize,
           pageSize: pagination.pageSize,
           onChange: handlePageChange,
@@ -324,9 +331,8 @@ const ProductListing: React.FC = () => {
           showSizeChanger: true,
           showQuickJumper: false,
           showTotal: (total) => (
-            <div className="pagination-total">Total {total} items</div>
+            <div className={s.antPaginationTotalText}>Total {total} items</div>
           ),
-          align: "center",
           itemRender: (_page, type, originalElement) => {
             if (type === "prev") {
               return (
