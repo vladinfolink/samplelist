@@ -1,4 +1,13 @@
 {
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "noImplicitThis": false,
+    "noImplicitReturns": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "strict": false
+  },
   "files": [],
   "references": [
     {
