@@ -263,3 +263,21 @@
     order: 2;
   }
 }
+
+.filterMenu {
+  min-width: 200px;
+  padding: 12px;
+}
+
+.filterMenuContent {
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.filterMenuFooter {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+  margin-top: 4px;
+}

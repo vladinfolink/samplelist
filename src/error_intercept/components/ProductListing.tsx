@@ -1,5 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Select, Space, Button, Tag, Input, List, Checkbox } from "antd";
+import {
+  Select,
+  Space,
+  Button,
+  Tag,
+  Input,
+  List,
+  Checkbox,
+  Popover,
+} from "antd";
 import cn from "clsx";
 import {
   EllipsisOutlined,
@@ -12,9 +21,9 @@ import s from "./ProductListing.module.css";
 import { Product, mockProducts } from "./mockedProducts";
 
 const statusStyles = {
-  ACTIVE: { color: "#52c41a", text: "Approved" },
-  INACTIVE: { color: "#faad14", text: "Warning" },
-  SUSPENDED: { color: "#ff4d4f", text: "Error" },
+  ACTIVE: { color: "#52c41a", text: "Active" },
+  INACTIVE: { color: "#faad14", text: "Inactive" },
+  SUSPENDED: { color: "#ff4d4f", text: "Suspended" },
   TERMINATED: { color: "#d9d9d9", text: "Terminated" },
 };
 
@@ -58,7 +67,10 @@ const useProductData = (initialPageSize: number) => {
         let filteredData = [...mockProducts];
 
         if (filter) {
-          filteredData = filteredData.filter((item) => item.status === filter);
+          const filters = filter.includes(",") ? filter.split(",") : [filter];
+          filteredData = filteredData.filter((item) =>
+            filters.includes(item.status)
+          );
         }
 
         if (search) {
@@ -175,6 +187,8 @@ const useProductData = (initialPageSize: number) => {
 
 const ProductListing: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [menuFilters, setMenuFilters] = useState<string[]>([]);
 
   const {
     data,
@@ -203,7 +217,9 @@ const ProductListing: React.FC = () => {
   };
 
   const handleSelectChange = (value: string) => {
-    handleFilterChange(value === "" ? null : value);
+    const newValue = value === "" ? null : value;
+    setMenuFilters(newValue ? [newValue] : []);
+    handleFilterChange(newValue);
   };
 
   const handleCheckboxChange = (id: string) => {
@@ -214,6 +230,7 @@ const ProductListing: React.FC = () => {
 
   const handleResetAll = () => {
     setSelectedItems([]);
+    setMenuFilters([]);
     resetAll();
   };
 
@@ -237,6 +254,68 @@ const ProductListing: React.FC = () => {
     return (
       <div className={s.statusIndicator} style={{ color: style.color }}>
         {style.text}
+      </div>
+    );
+  };
+
+  const FilterMenu = () => {
+    // Initialize with both menu filters and current filter value
+    const [localFilters, setLocalFilters] = useState<string[]>(() => {
+      const currentFilters = new Set([...menuFilters]);
+      if (filterValue && !currentFilters.has(filterValue)) {
+        currentFilters.add(filterValue);
+      }
+      return Array.from(currentFilters);
+    });
+
+    // Update localFilters when menuFilters or filterValue changes
+    useEffect(() => {
+      const currentFilters = new Set([...menuFilters]);
+      if (filterValue && !currentFilters.has(filterValue)) {
+        currentFilters.add(filterValue);
+      }
+      setLocalFilters(Array.from(currentFilters));
+    }, [menuFilters, filterValue]);
+
+    const handleFilterReset = () => {
+      setLocalFilters([]);
+    };
+
+    const handleFilterApply = () => {
+      setMenuFilters(localFilters);
+      handleFilterChange(localFilters.length ? localFilters.join(",") : null);
+      setFilterMenuOpen(false);
+    };
+
+    return (
+      <div className={s.filterMenu}>
+        <Space direction="vertical" size={8} className={s.filterMenuContent}>
+          {statusOptions
+            .filter((option) => option.value)
+            .map((option) => (
+              <Checkbox
+                key={option.value}
+                checked={localFilters.includes(option.value)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setLocalFilters([...localFilters, option.value]);
+                  } else {
+                    setLocalFilters(
+                      localFilters.filter((f) => f !== option.value)
+                    );
+                  }
+                }}
+              >
+                {option.label}
+              </Checkbox>
+            ))}
+        </Space>
+        <div className={s.filterMenuFooter}>
+          <Button onClick={handleFilterReset}>Reset</Button>
+          <Button type="primary" onClick={handleFilterApply}>
+            OK
+          </Button>
+        </div>
       </div>
     );
   };
@@ -273,7 +352,15 @@ const ProductListing: React.FC = () => {
             options={statusOptions}
             allowClear
           />
-          <Button>+ Add Filter</Button>
+          <Popover
+            content={<FilterMenu />}
+            trigger="click"
+            open={filterMenuOpen}
+            onOpenChange={setFilterMenuOpen}
+            placement="bottom"
+          >
+            <Button>+ Add Filter</Button>
+          </Popover>
         </div>
         <Button type="text" onClick={handleResetAll}>
           Reset All
