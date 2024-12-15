@@ -15,10 +15,10 @@ import {
   MenuOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-// import "./ProductListing.css";
 
 import s from "./ProductListing.module.css";
 import { Product, mockProducts } from "./mockedProducts";
+import FilterMenu from "./FilterMenu";
 
 const statusStyles = {
   ACTIVE: { color: "#52c41a", text: "Active" },
@@ -33,6 +33,7 @@ interface ProductState {
   error: Error | null;
   searchValue: string;
   filterValue: string | null;
+  menuFilters: string[];
   pagination: {
     current: number;
     pageSize: number;
@@ -47,6 +48,7 @@ const useProductData = (initialPageSize: number) => {
     error: null,
     searchValue: "",
     filterValue: null,
+    menuFilters: [], // Add this
     pagination: {
       current: 1,
       pageSize: initialPageSize,
@@ -139,9 +141,14 @@ const useProductData = (initialPageSize: number) => {
   );
 
   const handleFilterChange = useCallback(
-    (value: string | null) => {
+    (value: string | null, filters: string[]) => {
+      // Add filters parameter
       if (state.loading) return;
-      setState((prev) => ({ ...prev, filterValue: value }));
+      setState((prev) => ({
+        ...prev,
+        filterValue: value,
+        menuFilters: filters, // Update both together
+      }));
       fetchData(1, value, state.searchValue);
     },
     [state.loading, state.searchValue, fetchData]
@@ -162,6 +169,7 @@ const useProductData = (initialPageSize: number) => {
       ...prev,
       filterValue: null,
       searchValue: "",
+      menuFilters: [], // Add this to clear the menu filters
     }));
     fetchData(1, null, "");
   }, [state.loading, fetchData]);
@@ -182,13 +190,13 @@ const useProductData = (initialPageSize: number) => {
     handleFilterChange,
     handleSearch,
     resetAll,
+    menuFilters: state.menuFilters,
   };
 };
 
 const ProductListing: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
-  const [menuFilters, setMenuFilters] = useState<string[]>([]);
 
   const {
     data,
@@ -202,6 +210,7 @@ const ProductListing: React.FC = () => {
     handleFilterChange,
     handleSearch,
     resetAll,
+    menuFilters,
   } = useProductData(10);
 
   const statusOptions = [
@@ -212,14 +221,18 @@ const ProductListing: React.FC = () => {
     { label: "Terminated", value: "TERMINATED" },
   ];
 
+  const handleFilterMenuOpen = (open: boolean) => {
+    setFilterMenuOpen(open);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleSearch(e.target.value);
   };
 
   const handleSelectChange = (value: string) => {
     const newValue = value === "" ? null : value;
-    setMenuFilters(newValue ? [newValue] : []);
-    handleFilterChange(newValue);
+    const newFilters = newValue ? [newValue] : [];
+    handleFilterChange(newValue, newFilters);
   };
 
   const handleCheckboxChange = (id: string) => {
@@ -228,9 +241,13 @@ const ProductListing: React.FC = () => {
     );
   };
 
+  const handleFilterApply = (filters: string[]) => {
+    handleFilterChange(filters.length ? filters.join(",") : null, filters);
+    setFilterMenuOpen(false);
+  };
+
   const handleResetAll = () => {
     setSelectedItems([]);
-    setMenuFilters([]);
     resetAll();
   };
 
@@ -254,68 +271,6 @@ const ProductListing: React.FC = () => {
     return (
       <div className={s.statusIndicator} style={{ color: style.color }}>
         {style.text}
-      </div>
-    );
-  };
-
-  const FilterMenu = () => {
-    // Initialize with both menu filters and current filter value
-    const [localFilters, setLocalFilters] = useState<string[]>(() => {
-      const currentFilters = new Set([...menuFilters]);
-      if (filterValue && !currentFilters.has(filterValue)) {
-        currentFilters.add(filterValue);
-      }
-      return Array.from(currentFilters);
-    });
-
-    // Update localFilters when menuFilters or filterValue changes
-    useEffect(() => {
-      const currentFilters = new Set([...menuFilters]);
-      if (filterValue && !currentFilters.has(filterValue)) {
-        currentFilters.add(filterValue);
-      }
-      setLocalFilters(Array.from(currentFilters));
-    }, [menuFilters, filterValue]);
-
-    const handleFilterReset = () => {
-      setLocalFilters([]);
-    };
-
-    const handleFilterApply = () => {
-      setMenuFilters(localFilters);
-      handleFilterChange(localFilters.length ? localFilters.join(",") : null);
-      setFilterMenuOpen(false);
-    };
-
-    return (
-      <div className={s.filterMenu}>
-        <Space direction="vertical" size={8} className={s.filterMenuContent}>
-          {statusOptions
-            .filter((option) => option.value)
-            .map((option) => (
-              <Checkbox
-                key={option.value}
-                checked={localFilters.includes(option.value)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setLocalFilters([...localFilters, option.value]);
-                  } else {
-                    setLocalFilters(
-                      localFilters.filter((f) => f !== option.value)
-                    );
-                  }
-                }}
-              >
-                {option.label}
-              </Checkbox>
-            ))}
-        </Space>
-        <div className={s.filterMenuFooter}>
-          <Button onClick={handleFilterReset}>Reset</Button>
-          <Button type="primary" onClick={handleFilterApply}>
-            OK
-          </Button>
-        </div>
       </div>
     );
   };
@@ -353,10 +308,18 @@ const ProductListing: React.FC = () => {
             allowClear
           />
           <Popover
-            content={<FilterMenu />}
+            content={
+              <FilterMenu
+                key={menuFilters.join(",")} // Add this key
+                initialFilters={menuFilters}
+                statusOptions={statusOptions}
+                onApply={handleFilterApply}
+                onClose={() => setFilterMenuOpen(false)}
+              />
+            }
             trigger="click"
             open={filterMenuOpen}
-            onOpenChange={setFilterMenuOpen}
+            onOpenChange={handleFilterMenuOpen}
             placement="bottom"
           >
             <Button>+ Add Filter</Button>

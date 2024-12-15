@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import ProductListing from "./ProductListing";
 
@@ -112,33 +112,33 @@ describe("ProductListing", () => {
     expect(mastercardElements.length).toBeGreaterThan(0);
   });
 
-  it("filters by status when status is selected", async () => {
-    const { container } = render(<ProductListing />);
+  describe("ProductListing", () => {
+    it("filters by status when status is selected", async () => {
+      render(<ProductListing />);
 
-    // Allow time for initial render
-    await new Promise((resolve) => setTimeout(resolve, 0));
+      // Find the status select by its placeholder or text
+      const statusSelect = screen.getByText("All");
+      expect(statusSelect).toBeInTheDocument();
 
-    // Find the select element by class
-    const select = container.querySelector(".ant-select-selector");
-    expect(select).toBeTruthy();
+      // Open the dropdown
+      fireEvent.mouseDown(statusSelect);
 
-    if (select) {
-      // Open dropdown
-      fireEvent.mouseDown(select);
+      // Wait for and click the "Active" option in the dropdown
+      const activeOption = await waitFor(() =>
+        screen.getByText("Active", {
+          selector: ".ant-select-item-option-content",
+        })
+      );
+      fireEvent.click(activeOption);
 
-      // Wait for dropdown to open
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      // Click Active option
-      fireEvent.click(screen.getByText("Active"));
-
-      // Wait for filtering to complete
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      // Verify filter results
-      const approvedElements = screen.getAllByText("Approved");
-      expect(approvedElements.length).toBeGreaterThan(0);
-    }
+      // Verify that the filter has been applied by checking status indicators
+      await waitFor(() => {
+        const statusElements = screen.getAllByText("Active", {
+          selector: '[class*="statusIndicator"]',
+        });
+        expect(statusElements.length).toBeGreaterThan(0);
+      });
+    });
   });
 
   it("changes page when pagination is clicked", () => {
@@ -155,26 +155,5 @@ describe("ProductListing", () => {
     fireEvent.click(nextButton);
     fireEvent.click(nextButton);
     expect(screen.getByText(/Total \d+ items/)).toBeInTheDocument();
-  });
-
-  it("filters by status when status is selected", async () => {
-    const { container } = render(<ProductListing />);
-
-    // Using MutationObserver to wait for the Select to be fully rendered
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const select = container.querySelector(".ant-select-selector");
-    expect(select).toBeTruthy();
-
-    if (select) {
-      fireEvent.mouseDown(select);
-      fireEvent.click(screen.getByText("Active"));
-    }
-
-    // Wait for the filtering to complete
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const approvedElements = screen.getAllByText("Approved");
-    expect(approvedElements.length).toBeGreaterThan(0);
   });
 });
